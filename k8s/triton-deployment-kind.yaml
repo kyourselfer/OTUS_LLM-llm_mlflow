@@ -1,0 +1,71 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: triton-server
+  labels:
+    app: triton-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: triton-server
+  template:
+    metadata:
+      labels:
+        app: triton-server
+    spec:
+      initContainers:
+        - name: init-model-repo
+          image: alpine:3.19
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -e
+              mkdir -p /models/identity/1
+              cat >/models/identity/config.pbtxt <<'EOF'
+              name: "identity"
+              backend: "identity"
+              max_batch_size: 0
+              input [
+                {
+                  name: "INPUT__0"
+                  data_type: TYPE_FP32
+                  dims: [ 1 ]
+                }
+              ]
+              output [
+                {
+                  name: "OUTPUT__0"
+                  data_type: TYPE_FP32
+                  dims: [ 1 ]
+                }
+              ]
+              EOF
+          volumeMounts:
+            - name: model-repo
+              mountPath: /models
+      containers:
+        - name: triton
+          image: triton-server:local
+          imagePullPolicy: IfNotPresent
+          args:
+            - tritonserver
+            - --model-repository=/models
+            - --http-port=8000
+            - --grpc-port=8001
+            - --metrics-port=8002
+          ports:
+            - name: http
+              containerPort: 8000
+            - name: grpc
+              containerPort: 8001
+            - name: metrics
+              containerPort: 8002
+          volumeMounts:
+            - name: model-repo
+              mountPath: /models
+      volumes:
+        - name: model-repo
+          emptyDir: {}
+
+

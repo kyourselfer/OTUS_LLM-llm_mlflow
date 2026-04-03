@@ -1,0 +1,83 @@
+stages:
+  - prepare
+  - build
+  - deploy
+  - test
+
+variables:
+  KUBECONFIG: "$HOME/.kube/config"
+  PATH: "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
+
+default:
+  tags:
+    - local-kind
+
+prepare:kind:
+  stage: prepare
+  script:
+    - bash scripts/create-kind-cluster.sh
+    - export KUBECONFIG="$HOME/.kube/config"
+    - kubectl config use-context kind-llm || true
+    - |
+      for i in {1..30}; do
+        kubectl cluster-info && break || true; sleep 2;
+      done
+    - kubectl get nodes | cat
+    - bash scripts/enable-ingress-nginx.sh
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "push" || $CI_PIPELINE_SOURCE == "merge_request_event"
+
+build:image:
+  stage: build
+  script:
+    - bash scripts/build-and-load.sh
+  needs: ["prepare:kind"]
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "push" || $CI_PIPELINE_SOURCE == "merge_request_event"
+
+deploy:all:
+  stage: deploy
+  script:
+    - |
+      if [ -n "${GHCR_TOKEN:-}" ]; then
+        echo "$GHCR_TOKEN" | docker login ghcr.io -u "${GHCR_USERNAME:-gitlab-ci}" --password-stdin
+      fi
+      if [ -n "${NGC_API_KEY:-}" ]; then
+        docker login nvcr.io -u '$oauthtoken' -p "$NGC_API_KEY"
+        export IMAGE_BASE=${IMAGE_BASE:-nvcr.io/nvidia/tritonserver:24.01-py3}
+      fi
+      # Ensure kubectl points to the kind cluster created in prepare stage
+      if [ -f /var/root/.kube/config ]; then export KUBECONFIG=/var/root/.kube/config; else export KUBECONFIG=$HOME/.kube/config; fi
+      kubectl config use-context kind-llm || true
+      for i in {1..30}; do kubectl cluster-info && break || sleep 2; done
+    - SKIP_KIND_PREP=1 bash scripts/deploy-all.sh
+  needs: ["build:image"]
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "push" || $CI_PIPELINE_SOURCE == "merge_request_event"
+
+test:smoke:
+  stage: test
+  script:
+    - |
+      # Point kubectl at the kind cluster kubeconfig
+      if [ -f /var/root/.kube/config ]; then export KUBECONFIG=/var/root/.kube/config; elif [ -f /Users/muse/.kube/config ]; then export KUBECONFIG=/Users/muse/.kube/config; else export KUBECONFIG=$HOME/.kube/config; fi
+      kubectl config use-context kind-llm || true
+      for i in {1..30}; do kubectl cluster-info && break || sleep 2; done
+      kubectl get nodes -o wide | cat
+      kubectl get pods -A | cat
+    - kubectl wait --for=condition=available --timeout=180s deployment/llm-inference
+    - |
+      # Prefer stable connectivity via port-forward (ingress may not be ready)
+      kubectl port-forward svc/llm-inference 18080:80 >/dev/null 2>&1 & PF_PID=$!
+      sleep 5
+      curl -sSf http://127.0.0.1:18080/healthz | grep -q '"status":"ok"'
+      kill $PF_PID || true
+    - |
+      # Optional checks (best-effort)
+      curl -sSf -H "Host: mlflow.localtest.me" http://127.0.0.1:8080/ | head -n 1 | cat || true
+      curl -sSf -H "Host: triton.localtest.me" http://127.0.0.1:8080/metrics | head -n 5 | cat || true
+  needs: ["deploy:all"]
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "push" || $CI_PIPELINE_SOURCE == "merge_request_event"
+
+

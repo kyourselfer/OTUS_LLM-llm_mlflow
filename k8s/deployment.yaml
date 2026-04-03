@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: llm-inference
+  labels:
+    app: llm-inference
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: llm-inference
+  template:
+    metadata:
+      labels:
+        app: llm-inference
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: "/metrics"
+    spec:
+      containers:
+        - name: api
+          image: llm-ops-workshop:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+          env:
+            - name: MODEL_ID
+              value: "distilgpt2"
+            - name: TORCH_THREADS
+              value: "2"
+            - name: MLFLOW_TRACKING_URI
+              value: "http://mlflow:5000"
+            - name: MLFLOW_EXPERIMENT
+              value: "inference"
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "512Mi"
+            limits:
+              cpu: "1"
+              memory: "1Gi"
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 10

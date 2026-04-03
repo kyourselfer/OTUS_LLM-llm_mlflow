@@ -1,0 +1,34 @@
+{
+  "title": "LLM Inference Dashboard",
+  "panels": [
+    {
+      "type": "graph",
+      "title": "Requests per second",
+      "targets": [{"expr": "rate(llm_requests_total{endpoint=\"/generate\"}[1m])"}]
+    },
+    {
+      "type": "graph",
+      "title": "Latency (p50/p90/p99)",
+      "targets": [
+        {"expr": "histogram_quantile(0.5, sum(rate(llm_request_latency_seconds_bucket[5m])) by (le))"},
+        {"expr": "histogram_quantile(0.9, sum(rate(llm_request_latency_seconds_bucket[5m])) by (le))"},
+        {"expr": "histogram_quantile(0.99, sum(rate(llm_request_latency_seconds_bucket[5m])) by (le))"}
+      ]
+    },
+    {
+      "type": "graph",
+      "title": "Tokens (input/output)",
+      "targets": [
+        {"expr": "rate(llm_tokens_total{phase=\"input\"}[1m])"},
+        {"expr": "rate(llm_tokens_total{phase=\"output\"}[1m])"}
+      ]
+    },
+    {
+      "type": "graph",
+      "title": "GPU Memory (bytes)",
+      "targets": [{"expr": "llm_gpu_mem_bytes"}]
+    }
+  ],
+  "schemaVersion": 27,
+  "version": 1
+}

@@ -1,0 +1,9 @@
+global:
+  scrape_interval: 5s
+
+scrape_configs:
+  - job_name: 'llm-inference'
+    metrics_path: /metrics
+    static_configs:
+      # При использовании kind: проброси порт сервиса на localhost:8080
+      - targets: ['host.docker.internal:8080']

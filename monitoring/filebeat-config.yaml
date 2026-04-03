@@ -1,0 +1,14 @@
+filebeat.inputs:
+  - type: container
+    enabled: true
+    paths:
+      - /var/lib/docker/containers/*/*.log
+    processors:
+      - add_kubernetes_metadata: ~
+
+output.elasticsearch:
+  hosts: ["http://localhost:9200"]
+  index: "llm-inference-%{+yyyy.MM.dd}"
+
+setup.template.name: "llm-inference"
+setup.template.pattern: "llm-inference-*"
