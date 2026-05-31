@@ -1,5 +1,6 @@
 hf download Qwen/Qwen2.5-3B-Instruct-GPTQ-Int8 --local-dir models/Qwen2.5-3B-Instruct-GPTQ-Int8
 docker compose up -d
+# test vllm api
 curl -s http://localhost:8000/v1/models -H "Authorization: Bearer local-qwen-key" | jq
 curl http://localhost:8000/v1/chat/completions \
   -H "Authorization: Bearer local-qwen-key" \
@@ -15,3 +16,10 @@ curl http://localhost:8000/v1/chat/completions \
     "temperature": 0.2,
     "max_tokens": 300
   }' | jq
+
+# 2. ask model 
+python3 -m venv ~/AI/python12-venv
+python3 apps/ask-llm-openai.py
+
+# mlflow
+docker buildx build -t llm-ops-workshop:latest -f ./inference/Dockerfile
