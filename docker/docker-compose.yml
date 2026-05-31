@@ -1,0 +1,36 @@
+services:
+  qwen-vllm:
+    image: vllm/vllm-openai:latest
+    container_name: qwen25-3b-instruct-gptq-int8-vllm
+    runtime: nvidia
+    ipc: host
+
+    ports:
+      - "8000:8000"
+
+    volumes:
+      - ~/.cache/huggingface:/root/.cache/huggingface
+      - /home/user/AI/Notebooks/OTUS_LLM-llm_mlflow/docker/models:/models
+
+    environment:
+      - HF_TOKEN=${HF_TOKEN}
+      - NVIDIA_VISIBLE_DEVICES=all
+
+    command: >
+      /models/Qwen2.5-3B-Instruct-GPTQ-Int8
+      --served-model-name qwen2.5-3b-instruct-gptq-int8 
+      --host 0.0.0.0
+      --port 8000
+      --dtype auto
+      --max-model-len 2048
+      --gpu-memory-utilization 0.70
+      --api-key local-qwen-key
+      --quantization gptq
+
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
