@@ -1,3 +1,14 @@
-huggingface_hub==1.17.0
+# ask-llm-*.py
+huggingface_hub==0.36.2
 requests==2.32.3
 openai==2.38.0
+# evaluate_vllm_direct_mlflow_judge.py
+mlflow==2.14.1
+openai>=1.40.0,<3.0.0
+pandas>=2.0.0,<3.0.0
+numpy>=1.24.0,<2.0.0
+pyarrow>=14.0.0,<17.0.0
+setuptools==80.9.0
+tiktoken==0.13.0
+evaluate==0.4.6
+textstat==0.7.13

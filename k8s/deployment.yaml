@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: llm-inference
+  namespace: infra-ml
   labels:
     app: llm-inference
 spec:
@@ -20,7 +21,7 @@ spec:
     spec:
       containers:
         - name: api
-          image: llm-ops-workshop:latest
+          image: 10.99.194.184:5000/llm-ops-workshop:latest
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8000

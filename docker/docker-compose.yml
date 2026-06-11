@@ -10,7 +10,7 @@ services:
 
     volumes:
       - ~/.cache/huggingface:/root/.cache/huggingface
-      - /home/user/AI/Notebooks/OTUS_LLM-llm_mlflow/docker/models:/models
+      - ~/AI/OTUS_LLM-llm_mlflow/docker/models:/models
 
     environment:
       - HF_TOKEN=${HF_TOKEN}
@@ -18,7 +18,7 @@ services:
 
     command: >
       /models/Qwen2.5-3B-Instruct-GPTQ-Int8
-      --served-model-name qwen2.5-3b-instruct-gptq-int8 
+      --served-model-name qwen2.5-3b-instruct-gptq-int8
       --host 0.0.0.0
       --port 8000
       --dtype auto
